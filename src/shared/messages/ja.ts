@@ -170,6 +170,7 @@ export const JA: Messages = {
 
   // session.ts
   "It is already running.": "すでに実行中です。",
+  "read the make-up and state again": "素性と状態をもう一度読む",
   "Send a goal first.": "先に目標を送ってください。",
   "That did not reach the agent: {reason}": "その言葉はエージェントに届きませんでした：{reason}",
   "Finished.": "終わりました。",

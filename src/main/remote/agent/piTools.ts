@@ -1,4 +1,5 @@
 import { Type } from "typebox";
+import { t } from "../../../shared/i18n";
 import { maskNote, maskSecrets } from "./secrets";
 import type { ProposalGate, RemoteApprovalMode, RulePolicy } from "../../../shared/remoteAgent";
 import {
@@ -723,7 +724,7 @@ export function createRemoteTools(defineTool: DefineTool, runtime: ToolRuntime) 
               runtime.record({
                 kind: "step",
                 tool: "read_server_facts",
-                command: "[facts] read the make-up and state again",
+                command: `[facts] ${t("read the make-up and state again")}`,
                 decision: "auto",
                 ok: true,
                 output: facts.detail,
@@ -734,7 +735,7 @@ export function createRemoteTools(defineTool: DefineTool, runtime: ToolRuntime) 
               runtime.record({
                 kind: "step",
                 tool: "read_server_facts",
-                command: "[facts] read the make-up and state again",
+                command: `[facts] ${t("read the make-up and state again")}`,
                 decision: "auto",
                 ok: false,
                 detail,

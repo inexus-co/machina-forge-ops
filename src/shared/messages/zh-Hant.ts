@@ -166,6 +166,7 @@ export const ZH_HANT: Messages = {
 
   // session.ts
   "It is already running.": "已經在執行中。",
+  "read the make-up and state again": "重新讀取機器的組態與狀態",
   "Send a goal first.": "請先傳送目標。",
   "That did not reach the agent: {reason}": "這句話沒有送到代理：{reason}",
   "Finished.": "已完成。",
