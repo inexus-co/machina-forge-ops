@@ -91,6 +91,30 @@ The decisions, with what they cost and what was rejected:
 Both are in English. They are the argument behind the four layers, the sandbox and the file
 procedure above, and they say plainly where each of them stops working.
 
+## What this does not protect you from
+
+- **The screen agent has no allowlist.** A run that drives the desktop can type anything into a
+  terminal window it finds there, and none of the four layers apply. That is why a run works either
+  the screen or the shell and never both — and why the screen path exists only for servers with no
+  SSH at all.
+- **An allowlist is only as clever as whoever classified it.** `find -exec` and `-delete` are caught
+  by scanning the arguments, and `awk` and `sed` are refused on the target as code rather than
+  commands. A program with an escape hatch nobody has thought of yet gets through until somebody
+  classifies it. Reports of one are welcome.
+- **Nothing here stops prompt injection.** What the agent reads — a log line, a config file, a
+  filename — reaches the model, and text in it can be an instruction. What limits the damage is the
+  gates rather than the model's judgement: nothing unclassified runs, nothing elevated runs without
+  a person. But a poisoned log can still get a plausible, approvable command proposed with a
+  plausible reason, and then the last line of defence is a human reading the card.
+- **Approval fatigue is real**, and automatic mode exists because of it. Turning it on is a trade
+  the operator makes per server, with the floor (sudo, destructive, devices) still stopping.
+- **The wall is only as good as the platform's.** On a machine with no way to isolate — Windows
+  without WSL2 and without Docker — the local shell is not offered at all. There is an opt-in for
+  that case: off by default, approved line by line, and recorded as having run without a wall.
+- **It is not a monitoring system.** It reads a machine while somebody is working on it. Graphs
+  over a week and alerts at three in the morning need something resident, and that is a different
+  kind of product.
+
 ## Languages
 
 The screens are in English, Japanese, Simplified Chinese and Traditional Chinese, chosen in the
