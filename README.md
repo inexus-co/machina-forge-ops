@@ -42,6 +42,11 @@ alert was pasted in as it arrived.* **[Two minutes of the whole run, as video](h
   skills; a skill with a goal in it is also a command in the chat's ＋ menu. One can be added from
   a folder on this machine — nothing is fetched.
 
+![A server with no SSH: the agent right-clicks the desktop, and the approval card carries the picture it was aimed at](docs/media/screen-agent.gif)
+
+*A server with **no SSH at all**. The agent reads the desktop and works it; every action stops for a
+person, and the record keeps the before and after of each one.*
+
 ## Safety
 
 Every command goes through four layers, in this order:
