@@ -21,9 +21,12 @@ alert was pasted in as it arrived.* **[Two minutes of the whole run, as video](h
 
 - **Screen**: RDP through a helper of our own (`native/rdp`) that uses FreeRDP and sends only the
   rectangles that changed, over fd 3 — no window, no X11, no daemon. VNC is spoken directly, in
-  TypeScript.
+  TypeScript. **A server with no SSH is not a server this cannot work**: the agent reads the
+  desktop and works it — clicks and keystrokes — with every action stopping for a person and each
+  one recorded with the picture it was aimed at.
 - **Terminal**: SSH (`ssh2` and `xterm.js`). With `tmux`, the work continues after the
-  application is closed.
+  application is closed. Already looking at something? **Hand the session to the chat** and what
+  is on it goes to the agent as your own words, fenced and named, and into the record.
 - **Agent**: Pi (`@earendil-works/pi-coding-agent`). Several models can be registered and one
   chosen per run. Each named agent has its own model, its own way of asking for approval, and its
   own limit on how many commands a run may take.
