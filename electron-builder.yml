@@ -1,0 +1,68 @@
+# What a copy of this application is, once it leaves this machine.
+#
+# Two things travel that are not JavaScript: the RDP helper with its FreeRDP libraries, and the
+# icon. Both are put in `Resources/`, where `rdpSession.ts` and `index.ts` already look — the
+# code was written for a package that did not exist yet, and this is that package.
+#
+# Unsigned on purpose for now. `scripts/after-pack.cjs` applies an ad-hoc signature so the app
+# starts at all on Apple Silicon; Gatekeeper still asks on another Mac. Signing and notarisation
+# need a Developer ID certificate, which nobody here has yet.
+
+appId: co.inexus.machina.forge-ops
+productName: Machina Forge Ops
+copyright: inexus
+
+directories:
+  output: dist
+  # Not `assets/`: with the application's own icon as its build resources, the packager rewrote
+  # the file in the source tree. Its scratch space is its own.
+  buildResources: build/packager
+
+# The built application, and nothing from the source tree. `out/` is what electron-vite emits;
+# production dependencies are collected by the packager itself.
+files:
+  - out/**/*
+  - package.json
+
+# Native additions cannot be loaded from inside an archive.
+asarUnpack:
+  - "**/*.node"
+
+extraResources:
+  # Written by `scripts/before-pack.cjs`: the helper for the platform being packed, or nothing.
+  - from: build/rdp
+    to: rdp
+    filter: ["**/*"]
+  - from: assets/icon.png
+    to: assets/icon.png
+
+beforePack: ./scripts/before-pack.cjs
+afterPack: ./scripts/after-pack.cjs
+
+mac:
+  icon: build/packager/icon.png
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  # No certificate. The ad-hoc signature is applied afterwards instead.
+  identity: null
+
+win:
+  icon: build/packager/icon.png
+  # `zip` rather than an installer: NSIS needs wine to be built from a Mac, and an unsigned
+  # installer warns more loudly than an unsigned folder does.
+  target:
+    - target: zip
+      arch: [x64, arm64]
+
+linux:
+  icon: build/packager/icon.png
+  category: Development
+  target:
+    - target: AppImage
+      arch: [x64, arm64]
+    - target: tar.gz
+      arch: [x64, arm64]

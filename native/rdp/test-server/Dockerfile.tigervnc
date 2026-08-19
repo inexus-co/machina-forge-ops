@@ -1,0 +1,15 @@
+# TigerVNC — the VNC a Linux server actually runs, and the one that authenticates by account.
+#
+# x11vnc (see `Dockerfile.vnc`) covers the classic password and no-password handshakes. This one
+# exists for VeNCrypt: the negotiation inside the negotiation, where the credentials are a user
+# name and a password and the conversation may be wrapped in TLS. Two displays, because the
+# interesting difference is which sub-types a server offers.
+FROM ubuntu:22.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      tigervnc-standalone-server tigervnc-common fluxbox xterm openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+COPY start-tigervnc.sh /start-tigervnc.sh
+RUN chmod +x /start-tigervnc.sh
+EXPOSE 5901 5902
+CMD ["/start-tigervnc.sh"]

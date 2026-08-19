@@ -1,0 +1,13 @@
+node_modules/
+out/
+dist/
+# Staged by scripts/before-pack.cjs: one place for the packager to read the helper from.
+build/
+.env
+.DS_Store
+captures/
+*.mitm
+
+
+# Built by native/rdp/build.sh. The shipped copy is produced at package time.
+native/rdp/bin/

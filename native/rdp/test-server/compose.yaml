@@ -1,0 +1,148 @@
+# Throwaway servers to develop against.
+#
+#   docker compose -f native/rdp/test-server/compose.yaml up -d --build
+#
+#   RDP  127.0.0.1:13389   machina / machina      SSH  127.0.0.1:12222
+#
+# Other distributions, when a difference is worth checking:
+#
+#   docker compose -f native/rdp/test-server/compose.yaml --profile more up -d
+#
+#   fedora   RDP 127.0.0.1:13391                  (no SSH)
+#   legacy   RDP 127.0.0.1:13392   ubuntu/ubuntu  SSH 127.0.0.1:12223
+#
+# The other screen — a real VNC server, for the RFB client:
+#
+#   docker compose -f native/rdp/test-server/compose.yaml --profile vnc up -d --build vnc
+#
+#   vnc      VNC 127.0.0.1:15900   password `secret`
+#            VNC 127.0.0.1:15901   no password (security type None)
+#            VNC 127.0.0.1:15902   RFB 3.3, the old handshake
+#   tigervnc VNC 127.0.0.1:15911   VeNCrypt Plain / TLSPlain   root / vncpass
+#            VNC 127.0.0.1:15912   VeNCrypt X509Plain          root / vncpass
+#
+# Ports are deliberately not 3389 and 22: these are development fixtures and must never be
+# mistaken for a real server, least of all by a client left pointing at localhost.
+#
+# ## Which image, and why there are three
+#
+# Measured here, spawn to first painted frame, on Apple silicon:
+#
+#   danchitnis  ubuntu-xfce-next  arm64 native     3.3s
+#   danielguerra ubuntu-xrdp:20.04 amd64 emulated 16.4s
+#
+# None of that wait is the client's: the helper's loop is running 25ms after it starts, and
+# everything after is the far end authenticating and building a desktop. Emulating x86 to do it
+# is what costs the other thirteen seconds.
+#
+# So the default is `danchitnis`, with sshd added (see `Dockerfile`) because it ships without one
+# and this mode needs a machine that answers both ways. `legacy` stays because it is a different
+# and older xrdp, which is the kind of thing a customer actually runs — and because it is the one
+# that produced the reconnect artefact documented below.
+
+services:
+  # Ubuntu 26.04, XFCE, arm64 where the host is. The one to use.
+  ubuntu:
+    build: .
+    image: machina-test-xrdp-ssh
+    container_name: machina-test-ubuntu
+    # username, password, sudo — the base image's own arguments.
+    command: ["machina", "machina", "yes"]
+    ports:
+      - "13389:3389"
+      - "12222:22"
+    stop_grace_period: 5s
+    # Nothing here is worth keeping. A fresh container is the fix for a stuck session, so making
+    # state durable would only make that fix stop working.
+    tmpfs:
+      - /tmp
+
+  # A server with no way in from outside.
+  #
+  #   docker compose -f native/rdp/test-server/compose.yaml --profile more up -d inner
+  #   docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' machina-test-inner
+  #
+  # No published ports at all, which is the point: from this machine it cannot be reached, and
+  # from `ubuntu` it can. Register it with `ubuntu` as its jump server and the whole path — SSH, RDP
+  # and the status panel — has to go through the tunnel or not work at all. Credentials are
+  # inner / inner.
+  inner:
+    profiles: ["more"]
+    build: .
+    image: machina-test-xrdp-ssh
+    container_name: machina-test-inner
+    command: ["inner", "inner", "yes"]
+    stop_grace_period: 5s
+    tmpfs:
+      - /tmp
+
+  # The other screen: RFB rather than RDP, spoken by the client in `src/main/remote/vnc/`.
+  #
+  # Two ports onto one desktop — with a password and without — because "no authentication" is a
+  # security type of its own and both paths need proving. `src/main/remote/vnc/
+  # rfb.integration.test.ts` runs against this and skips when it is not up.
+  vnc:
+    profiles: ["vnc"]
+    build:
+      context: .
+      dockerfile: Dockerfile.vnc
+    image: machina-test-vnc
+    container_name: machina-test-vnc
+    ports:
+      - "15900:5900"
+      - "15901:5901"
+      - "15902:5902"
+    stop_grace_period: 5s
+    tmpfs:
+      - /tmp
+
+  # The VNC a Linux server actually runs, and the one that authenticates by account.
+  #
+  # x11vnc above covers the password and no-password handshakes; this covers VeNCrypt, where the
+  # credentials are a user name and a password and the conversation may be inside TLS. See
+  # `Dockerfile.tigervnc` for why there are two displays.
+  tigervnc:
+    profiles: ["vnc"]
+    build:
+      context: .
+      dockerfile: Dockerfile.tigervnc
+    image: machina-test-tigervnc
+    container_name: machina-test-tigervnc
+    ports:
+      - "15911:5901"
+      - "15912:5902"
+    stop_grace_period: 5s
+    tmpfs:
+      - /tmp
+
+  # A different distribution, for the times when the difference is the point. RDP only.
+  fedora:
+    profiles: ["more"]
+    image: danchitnis/xrdp:fedora-xfce-next
+    container_name: machina-test-fedora
+    command: ["machina", "machina", "yes"]
+    ports:
+      - "13391:3389"
+    stop_grace_period: 5s
+
+  # An older xrdp on Ubuntu 20.04. amd64 only, so it runs emulated and takes about twenty seconds
+  # to paint — keep that in mind before reading a slow first frame as a bug in the client.
+  #
+  # **Reconnecting sometimes returns no picture.** The session survives the disconnect and the
+  # next one attaches to it without repainting: the client connects, the frame count stays at
+  # zero, and nothing reports an error. It is this image, not the client — the same helper against
+  # a freshly started container paints in about a second. When it happens, recreate it:
+  #
+  #   docker compose -f native/rdp/test-server/compose.yaml rm -sf legacy
+  #   docker compose -f native/rdp/test-server/compose.yaml --profile more up -d legacy
+  legacy:
+    profiles: ["more"]
+    image: danielguerra/ubuntu-xrdp:20.04
+    container_name: machina-test-legacy
+    platform: linux/amd64
+    ports:
+      - "13392:3389"
+      - "12223:22"
+    stop_grace_period: 5s
+    tmpfs:
+      - /tmp
