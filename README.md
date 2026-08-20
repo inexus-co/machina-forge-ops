@@ -1,13 +1,30 @@
+<div align="center">
+
+<img src="assets/icon.png" alt="" width="128" />
+
 # Machina Forge Ops
+
+**The agent never gets a shell on your customer's server**
+
+A desktop application for maintaining somebody else's server: the screen (RDP or VNC),
+the terminal (SSH), and an agent that can work both — in one window.
+Nothing is installed on the machine being maintained.
+
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue)](#what-runs-where)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-green)](LICENSE)
+[![No account](https://img.shields.io/badge/no%20account-no%20telemetry-brightgreen)](#safety)
+
+[**Two minutes of a real run**](https://github.com/inexus-co/machina-forge-ops/releases/tag/demo) ·
+[**Build it**](#development)
 
 **English** · [日本語](README.ja.md) · [简体中文](README.zh-Hans.md) · [繁體中文](README.zh-Hant.md)
 
-A desktop application for maintaining a customer's servers remotely. **A screen** (RDP or VNC),
-**a terminal** (SSH) and **an agent that can work both** live in one window.
+</div>
 
-The pain it came from was having the applications scattered: the remote desktop, the terminal and
-the model's chat were three separate things, each connected to separately and asked separately.
-This is the three of them in one place.
+It exists instead of two habits: running a coding agent on the server itself, and keeping the
+remote desktop, the terminal and the model's chat in three separate windows — each connected to
+separately, each asked separately. This is the three of them in one place, and the agent works
+them without ever being handed a shell there.
 
 **Nothing is installed on the customer's server.** Everything is read over the connection that is
 already there, and what cannot be read is said on screen rather than guessed at.
@@ -16,6 +33,18 @@ already there, and what cannot be read is said on screen rather than guessed at.
 
 *One window, one server: its desktop over RDP, its shell over SSH, and the agent beside them. The
 alert was pasted in as it arrived.* **[Two minutes of the whole run, as video](https://github.com/inexus-co/machina-forge-ops/releases/tag/demo)**
+
+## Contents
+
+[What it does](#what-it-does) ·
+[Safety](#safety) ·
+[Why it is built this way](#why-it-is-built-this-way) ·
+[What this does not protect you from](#what-this-does-not-protect-you-from) ·
+[What runs where](#what-runs-where) ·
+[Languages](#languages) ·
+[Development](#development) ·
+[Built with](#built-with) ·
+[License](#license)
 
 ## What it does
 
@@ -75,6 +104,10 @@ Credentials (a server's password, a key's passphrase, a model's API key) live in
 store in the main process and **never come back to the screen**. Saved empty, what is already
 stored is used.
 
+**There is no account and no telemetry.** Nothing is registered, nothing is counted, and the only
+thing that leaves this machine is what the operator sends to the model they chose — which can be
+an endpoint on their own network.
+
 **Anything the model computes runs on your machine, not on the customer's.** The agent gets a real
 shell — pipes, redirection, scripts — inside a sandbox that can write only to that run's working
 directory, cannot read your home, and has no network. What reaches the server is still one line at
@@ -123,6 +156,29 @@ procedure above, and they say plainly where each of them stops working.
   over a week and alerts at three in the morning need something resident, and that is a different
   kind of product.
 
+## What runs where
+
+| | Screen (RDP) | Screen (VNC) | Terminal, files, agent | Signed |
+|---|---|---|---|---|
+| **macOS** | yes | yes | yes | no — right-click → Open, once |
+| **Windows** | not yet <sup>1</sup> | yes | yes | no |
+| **Linux** | yes <sup>2</sup> | yes | yes | n/a |
+
+<sup>1</sup> The RDP screen is a helper of our own on top of FreeRDP, and the Windows one has not
+been written yet.
+<sup>2</sup> The Linux helper is built and packaged on Linux — a Mac cannot cross-build it — and
+its FreeRDP libraries are the machine's own rather than bundled, so FreeRDP 3 has to be installed.
+On macOS they travel inside the application.
+
+**It is not signed.** An ad-hoc signature is applied, so it starts, but another Mac will say the
+developer cannot be verified the first time. Right-click → Open once, or clear it with
+`xattr -dr com.apple.security.quarantine <the app>`. Shipping it properly needs a Developer ID
+certificate and notarisation.
+
+The catalog's second tier is harvested from the distributions themselves — **Ubuntu 24.04,
+Debian 12, RHEL UBI 9, Rocky Linux 9 and AlmaLinux 9** — and a server running something else still
+works: what nobody has classified stops and says so.
+
 ## Languages
 
 The screens are in English, Japanese, Simplified Chinese and Traditional Chinese, chosen in the
@@ -148,7 +204,7 @@ The RDP helper is built for the machine it runs on, and the screen needs it duri
 native/rdp/build.sh
 ```
 
-## Packaging
+### Packaging
 
 ```bash
 yarn dist:mac     # a dmg and a zip in dist/, arm64 and x64
@@ -161,15 +217,6 @@ What goes in: the helper itself, and the FreeRDP libraries it needs (`bundle.sh`
 at a library outside — shipping an application with no screen beats shipping one that dies the
 moment somebody opens it.
 
-**It is not signed.** An ad-hoc signature is applied, so it starts, but another Mac will say the
-developer cannot be verified the first time. Right-click → Open once, or clear it with
-`xattr -dr com.apple.security.quarantine <the app>`. Shipping it properly needs a Developer ID
-certificate and notarisation.
-
-The Windows and Linux packages have no RDP screen in them: the Windows helper has not been written
-(`build.sh` does not cover it) and the Linux one still depends on whatever FreeRDP that machine
-has. The SSH terminal, the files and the agent work on both.
-
 The integration tests connect to a container for real, and skip in silence when there is not one.
 
 ```bash
@@ -178,8 +225,14 @@ docker compose -f native/rdp/test-server/compose.yaml up -d --build
 
 ## Built with
 
-Electron / React / TypeScript / electron-vite / FreeRDP (through a helper of our own) / ssh2 /
-xterm.js / Pi coding agent
+| | |
+|---|---|
+| Application | Electron, electron-vite |
+| Screens | React, TypeScript, plain CSS |
+| Screen (RDP) | FreeRDP, through a helper of our own (`native/rdp`) |
+| Screen (VNC) | RFB, spoken directly in TypeScript |
+| Terminal | ssh2, xterm.js |
+| Agent | Pi coding agent, and any OpenAI-compatible endpoint |
 
 ## License
 

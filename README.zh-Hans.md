@@ -1,18 +1,45 @@
+<div align="center">
+
+<img src="assets/icon.png" alt="" width="128" />
+
 # Machina Forge Ops
+
+**智能体永远拿不到客户服务器上的 shell**
+
+一个用于维护别人服务器的桌面应用：屏幕（RDP 或 VNC）、终端（SSH），
+以及两者都能用的智能体，都在同一个窗口里。被维护的机器上什么都不装。
+
+[![平台](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue)](#哪些功能在哪些系统上可用)
+[![许可证](https://img.shields.io/badge/license-AGPL--3.0-green)](LICENSE)
+[![无需账号](https://img.shields.io/badge/%E6%97%A0%E9%9C%80%E8%B4%A6%E5%8F%B7-%E6%97%A0%E9%81%A5%E6%B5%8B-brightgreen)](#安全)
+
+[**两分钟看完整次运行**](https://github.com/inexus-co/machina-forge-ops/releases/tag/demo) ·
+[**自己构建**](#开发)
 
 [English](README.md) · [日本語](README.ja.md) · **简体中文** · [繁體中文](README.zh-Hant.md)
 
-一个用于远程维护客户服务器的桌面应用。**屏幕**（RDP 或 VNC）、**终端**（SSH），以及**两者都能用的智能体**，
-在同一个窗口里。
+</div>
 
-它来自一件很具体的麻烦：远程桌面、终端、和模型的对话本来是三个各自独立的程序，要分别连接、分别提问。
-这里把这三件事放在了一处。
+它替代两种做法：一种是把编码智能体放到服务器里面跑；另一种是把远程桌面、终端、和模型的对话分成三个
+窗口，分别连接、分别提问。这里把这三件事放在了一处，而且智能体从头到尾都拿不到那台机器上的 shell。
 
 **客户的服务器上什么都不安装。** 一切都通过本来就存在的连接读取；**读不到的东西不猜，直接写在屏幕上。**
 
 ![工作区：RDP 的桌面、SSH 的终端，以及智能体，都在一个窗口里](docs/media/workspace.gif)
 
 *一个窗口，一台服务器：RDP 的桌面、SSH 的终端，以及旁边的智能体。监控告警是原样贴进去的。* **[两分钟看完整次运行（视频）](https://github.com/inexus-co/machina-forge-ops/releases/tag/demo)**
+
+## 目录
+
+[它能做什么](#它能做什么) ·
+[安全](#安全) ·
+[为什么这样设计](#为什么这样设计) ·
+[它保护不了什么](#它保护不了什么) ·
+[哪些功能在哪些系统上可用](#哪些功能在哪些系统上可用) ·
+[语言](#语言) ·
+[开发](#开发) ·
+[技术栈](#技术栈) ·
+[许可证](#许可证)
 
 ## 它能做什么
 
@@ -55,6 +82,9 @@
 每条命令和它的全部输出都进入运行记录。任何看起来像凭据的内容，在到达模型或记录之前就从输出里去掉了 ——
 键名保留，所以智能体能看到"密码已设置"，却永远看不到那个值。
 
+**没有账号，也没有遥测。** 不注册、不统计；离开这台机器的只有操作者发给自己选定模型的内容，
+而那个模型可以是自己网络里的端点。
+
 凭据（服务器密码、密钥口令、模型 API key）保存在主进程一侧的加密存储中，**永不回到界面上。**
 留空保存，就继续用已经存好的那一份。
 
@@ -94,6 +124,25 @@
 - **它不是监控系统。** 它是在有人正在处理这台机器时去读它。一周的曲线、凌晨三点的告警需要常驻的东西，
   那是另一种产品
 
+## 哪些功能在哪些系统上可用
+
+| | 屏幕（RDP） | 屏幕（VNC） | 终端、文件、智能体 | 签名 |
+|---|---|---|---|---|
+| **macOS** | 可用 | 可用 | 可用 | 无 —— 第一次右键 → 打开 |
+| **Windows** | 还没有 <sup>1</sup> | 可用 | 可用 | 无 |
+| **Linux** | 可用 <sup>2</sup> | 可用 | 可用 | 不适用 |
+
+<sup>1</sup> RDP 屏幕是我们自己基于 FreeRDP 写的 helper，Windows 版还没写。
+<sup>2</sup> Linux 版 helper 只能在 Linux 上构建（Mac 交叉编译不了）。FreeRDP 库不打包进去，
+用机器自己的，所以需要装 FreeRDP 3。macOS 上这些库跟着应用一起走。
+
+**没有签名。** 用的是 ad-hoc 签名，能启动，但在别的 Mac 上第一次会提示无法验证开发者。
+右键 → 打开 一次，或者用 `xattr -dr com.apple.security.quarantine <应用>` 清掉。
+要正经分发需要 Developer ID 证书和公证。
+
+命令目录的第二层是从发行版自己那里采集的 —— **Ubuntu 24.04、Debian 12、RHEL UBI 9、
+Rocky Linux 9、AlmaLinux 9**。跑别的系统的服务器也能用：没人判断过的命令会停下来，并说明原因。
+
 ## 语言
 
 界面有英语、日语、简体中文、繁体中文，在设置里选择，切换无需重启。
@@ -117,7 +166,7 @@ RDP helper 需要针对运行它的机器构建，开发时屏幕也依赖它
 native/rdp/build.sh
 ```
 
-## 打包
+### 打包
 
 ```bash
 yarn dist:mac     # dist/ 下的 dmg 与 zip，arm64 与 x64
@@ -128,13 +177,6 @@ yarn dist:linux
 打进去的东西：helper 本身，以及它需要的 FreeRDP 库（`bundle.sh` 会把它们改写成 `@loader_path`）。
 每次打包都重新构建，只要还指向外部的库就不打包 —— 发一个没有屏幕的应用，好过发一个打开就崩的应用。
 
-**没有签名。** 用的是 ad-hoc 签名，能启动，但在别的 Mac 上第一次会提示无法验证开发者。
-右键 → 打开 一次，或者用 `xattr -dr com.apple.security.quarantine <应用>` 清掉。
-要正经分发需要 Developer ID 证书和公证。
-
-Windows 与 Linux 的包里没有 RDP 屏幕：Windows 的 helper 还没写（`build.sh` 不涵盖），
-Linux 的仍然依赖那台机器上的 FreeRDP。SSH 终端、文件和智能体在两边都能用。
-
 集成测试会真的连接一个容器；没有容器时会安静地跳过。
 
 ```bash
@@ -143,8 +185,14 @@ docker compose -f native/rdp/test-server/compose.yaml up -d --build
 
 ## 技术栈
 
-Electron / React / TypeScript / electron-vite / FreeRDP（经由自己的 helper）/ ssh2 /
-xterm.js / Pi coding agent
+| | |
+|---|---|
+| 应用 | Electron、electron-vite |
+| 界面 | React、TypeScript、纯 CSS |
+| 屏幕（RDP） | FreeRDP，经由自己的 helper（`native/rdp`） |
+| 屏幕（VNC） | 直接用 TypeScript 实现 RFB |
+| 终端 | ssh2、xterm.js |
+| 智能体 | Pi coding agent，以及任何 OpenAI 兼容端点 |
 
 ## 许可证
 
