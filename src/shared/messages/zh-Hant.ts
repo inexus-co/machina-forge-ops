@@ -245,6 +245,65 @@ export const ZH_HANT: Messages = {
   "Jump server: {reason}": "跳板機：{reason}",
   "The jump server cannot reach {where}: {reason}": "無法從跳板機連線到 {where}：{reason}",
 
+  // wayIn.ts (the providers' table), tunnel.ts, and the host form's tabs
+  "Screen": "畫面",
+  "SSH": "SSH",
+  "RDP and VNC": "RDP 與 VNC",
+  "The account, the key, tmux": "帳號、金鑰、tmux",
+  "When it cannot be reached directly": "直接連不上時",
+  "Go in through another server": "經由另一台伺服器進入",
+  "Straight to an address": "寫位址，直接連",
+  "Machine name": "機器名稱",
+  "A command that ends in a shell": "最終給出 shell 的命令",
+  "It runs on this machine, as you. What comes back has to be a shell — the command is not given one, so a pipe or a semicolon here is a character, not a second command.":
+    "在這台機器上、以你的身分執行。返回的必須是一個 shell。命令本身不經過 shell，所以這裡寫的管線或分號只是字元，不是第二條命令。",
+  "A provider's command runs on this machine, as you, with the credentials you already use with them, and what comes back is a shell — so there is no account, no key and no host key here, and no files panel either. A jump server is not used as well.":
+    "服務商的命令在這台機器上、以你的身分、用你在該服務商一直使用的憑證執行。返回的是一個 shell，所以這裡沒有帳號、沒有金鑰、也沒有主機金鑰確認，檔案面板也用不了。跳板機不與它併用。",
+  "Files are not available on a server reached by the provider's own command: that way in gives a shell, and file transfer needs SSH.":
+    "用服務商命令進入的伺服器，檔案面板用不了：那條路給的是 shell，而傳檔案需要 SSH。",
+  "{label} (only if needed)": "{label}（需要時才填）",
+  "Fill in {label} for the way in.": "請填寫入口的「{label}」。",
+  "This server's way in is not filled in.": "這台伺服器的入口沒有填寫。",
+  "{program} is not installed on this machine, or is not on the PATH.":
+    "這台機器上沒有裝 {program}，或者它不在 PATH 裡。",
+  "{program} said: {said}": "{program} 的回覆：{said}",
+  "It ended without saying why.": "它沒說原因就結束了。",
+  "The shell on the other end ended: {reason}": "對端的 shell 結束了：{reason}",
+  "The way in could not be opened: {reason}": "打不開入口：{reason}",
+  "The way in did not open in time: {reason}": "入口沒有在時限內打開：{reason}",
+  "Instance ID": "執行個體 ID",
+  "Region": "區域",
+  "Profile": "設定檔",
+  "Instance name": "執行個體名稱",
+  "Zone": "可用區",
+  "Project": "專案",
+  "Resource group": "資源群組",
+  "Something else": "其他",
+
+
+  // fileTransfer.ts (how a file gets across) and its tab
+  "File transfer": "檔案傳輸",
+  "For the ones too big for the connection": "線路載不下的時候",
+  "Fill in {label} for file transfer.": "請填寫檔案傳輸的「{label}」。",
+  "Straight down the connection": "直接走這條線路",
+  "Over SSH that is SFTP. Over a shell handed back by a provider's command there is no SFTP, so the file travels as text down the same stream — which suits a configuration file and not a database dump.":
+    "SSH 就是 SFTP。服務商命令返回的 shell 沒有 SFTP，檔案只能以文字形式走同一條流。適合設定檔，不適合資料庫匯出。",
+  "Where to leave it": "存放位置",
+  "Both machines need the AWS CLI and permission for that prefix — the server's from the role its instance already has, yours from the profile you already use.":
+    "兩台機器都需要 AWS CLI 和該位置的權限。伺服器一側來自執行個體本來就有的角色，你這邊來自你一直使用的設定檔。",
+  "Both machines need the Google Cloud CLI and permission for that prefix.":
+    "兩台機器都需要 Google Cloud CLI 和該位置的權限。",
+  "Storage account": "儲存體帳戶",
+  "Both machines need the Azure CLI and permission on that container.":
+    "兩台機器都需要 Azure CLI 和該容器的權限。",
+  "Somewhere else": "其他存放位置",
+  "The command that puts a file there": "放上去的命令",
+  "The command that gets it back": "取回來的命令",
+  "Both run on whichever machine is sending or fetching, so both have to work on both. {f} is the file on that machine, {n} the name in the store.":
+    "送和取都用這兩條，所以兩台機器上都要能跑。{f} 是那台機器上的檔案，{n} 是存放位置裡的名稱。",
+  "Nothing of the store's is kept here — each machine uses the credentials it already has, and what is left in it is removed once the file is across. The seven steps of changing a file are the same either way: the real file is fetched, copied on both sides, and the difference goes on an approval card before anything is written.":
+    "存放位置的憑證不保存在這裡，各自的機器用它本來就有的。傳完就清掉。改檔案的七步兩邊都一樣：取回實際檔案、兩側各留副本、差異先上審批卡，然後才寫回。",
+
   // localeController.ts
   "That is not a language this can use.": "無法處理該語言。",
 
@@ -731,7 +790,6 @@ export const ZH_HANT: Messages = {
   "This one had already been decided.": "此操作已經決定過了。",
   "Command {n}, thinking…": "第 {n} 條命令　正在思考…",
   "Thinking…": "正在思考…",
-  "Screen": "畫面",
   "Show the commands it ran": "查看執行過的命令",
   "{title}'s screen": "{title}的畫面",
   "Take {title}'s screen away": "移除{title}的畫面",

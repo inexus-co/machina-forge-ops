@@ -245,6 +245,65 @@ export const ZH_HANS: Messages = {
   "Jump server: {reason}": "跳板机：{reason}",
   "The jump server cannot reach {where}: {reason}": "无法从跳板机连接到 {where}：{reason}",
 
+  // wayIn.ts (the providers' table), tunnel.ts, and the host form's tabs
+  "Screen": "画面",
+  "SSH": "SSH",
+  "RDP and VNC": "RDP 与 VNC",
+  "The account, the key, tmux": "账号、密钥、tmux",
+  "When it cannot be reached directly": "直接连不上时",
+  "Go in through another server": "经由另一台服务器进入",
+  "Straight to an address": "写地址，直接连",
+  "Machine name": "机器名称",
+  "A command that ends in a shell": "最终给出 shell 的命令",
+  "It runs on this machine, as you. What comes back has to be a shell — the command is not given one, so a pipe or a semicolon here is a character, not a second command.":
+    "在这台机器上、以你的身份运行。返回的必须是一个 shell。命令本身不经过 shell，所以这里写的管道或分号只是字符，不是第二条命令。",
+  "A provider's command runs on this machine, as you, with the credentials you already use with them, and what comes back is a shell — so there is no account, no key and no host key here, and no files panel either. A jump server is not used as well.":
+    "服务商的命令在这台机器上、以你的身份、用你在该服务商一直使用的凭据运行。返回的是一个 shell，所以这里没有账号、没有密钥、也没有主机密钥确认，文件面板也用不了。跳板机不与它同时使用。",
+  "Files are not available on a server reached by the provider's own command: that way in gives a shell, and file transfer needs SSH.":
+    "用服务商命令进入的服务器，文件面板用不了：那条路给的是 shell，而传文件需要 SSH。",
+  "{label} (only if needed)": "{label}（需要时才填）",
+  "Fill in {label} for the way in.": "请填写入口的「{label}」。",
+  "This server's way in is not filled in.": "这台服务器的入口没有填写。",
+  "{program} is not installed on this machine, or is not on the PATH.":
+    "这台机器上没有装 {program}，或者它不在 PATH 里。",
+  "{program} said: {said}": "{program} 的回复：{said}",
+  "It ended without saying why.": "它没说原因就结束了。",
+  "The shell on the other end ended: {reason}": "对端的 shell 结束了：{reason}",
+  "The way in could not be opened: {reason}": "打不开入口：{reason}",
+  "The way in did not open in time: {reason}": "入口没有在时限内打开：{reason}",
+  "Instance ID": "实例 ID",
+  "Region": "区域",
+  "Profile": "配置档",
+  "Instance name": "实例名",
+  "Zone": "可用区",
+  "Project": "项目",
+  "Resource group": "资源组",
+  "Something else": "其他",
+
+
+  // fileTransfer.ts (how a file gets across) and its tab
+  "File transfer": "文件传输",
+  "For the ones too big for the connection": "线路载不下的时候",
+  "Fill in {label} for file transfer.": "请填写文件传输的「{label}」。",
+  "Straight down the connection": "直接走这条线路",
+  "Over SSH that is SFTP. Over a shell handed back by a provider's command there is no SFTP, so the file travels as text down the same stream — which suits a configuration file and not a database dump.":
+    "SSH 就是 SFTP。服务商命令返回的 shell 没有 SFTP，文件只能以文本形式走同一条流。适合配置文件，不适合数据库导出。",
+  "Where to leave it": "存放位置",
+  "Both machines need the AWS CLI and permission for that prefix — the server's from the role its instance already has, yours from the profile you already use.":
+    "两台机器都需要 AWS CLI 和该位置的权限。服务器一侧来自实例本来就有的角色，你这边来自你一直使用的配置档。",
+  "Both machines need the Google Cloud CLI and permission for that prefix.":
+    "两台机器都需要 Google Cloud CLI 和该位置的权限。",
+  "Storage account": "存储账户",
+  "Both machines need the Azure CLI and permission on that container.":
+    "两台机器都需要 Azure CLI 和该容器的权限。",
+  "Somewhere else": "其他存放位置",
+  "The command that puts a file there": "放上去的命令",
+  "The command that gets it back": "取回来的命令",
+  "Both run on whichever machine is sending or fetching, so both have to work on both. {f} is the file on that machine, {n} the name in the store.":
+    "送和取都用这两条，所以两台机器上都要能跑。{f} 是那台机器上的文件，{n} 是存放位置里的名字。",
+  "Nothing of the store's is kept here — each machine uses the credentials it already has, and what is left in it is removed once the file is across. The seven steps of changing a file are the same either way: the real file is fetched, copied on both sides, and the difference goes on an approval card before anything is written.":
+    "存放位置的凭据不保存在这里，各自的机器用它本来就有的。传完就清掉。改文件的七步两边都一样：取回实际文件、两侧各留副本、差异先上审批卡，然后才写回。",
+
   // localeController.ts
   "That is not a language this can use.": "无法处理该语言。",
 
@@ -731,7 +790,6 @@ export const ZH_HANS: Messages = {
   "This one had already been decided.": "此操作已经决定过了。",
   "Command {n}, thinking…": "第 {n} 条命令　正在思考…",
   "Thinking…": "正在思考…",
-  "Screen": "画面",
   "Show the commands it ran": "查看执行过的命令",
   "{title}'s screen": "{title}的画面",
   "Take {title}'s screen away": "移除{title}的画面",

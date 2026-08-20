@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { Inventory, LogSource } from "../../../shared/remoteInventory";
 import { CommandRunner } from "../commandRunner";
 import { type SshTarget, connectionOf, describe } from "../sshSession";
+import { killShell, spawnShell } from "../shellHost";
 import { WINDOWS_INVENTORY_SCRIPT, parseWindowsInventory, powershell } from "../windows";
 import { INVENTORY_COMMAND, INVENTORY_MAX_OUTPUT, parseInventory } from "./parse";
 import { LOG_SOURCES_COMMAND, parseLogSources } from "./logSources";
@@ -34,7 +35,13 @@ const offered = new Map<string, LogSource[]>();
 
 const runners = new Map<string, CommandRunner>();
 /** One follow per host: two tails of the same file into one pane would interleave nonsense. */
-const follows = new Map<string, Client>();
+/**
+ * The connection a log is being tailed on, whichever kind it is.
+ *
+ * Either an SSH client or the provider's own shell process: both are "a thing to stop", and the
+ * only thing this map is ever asked to do with them is stop them.
+ */
+const follows = new Map<string, { end(): void }>();
 /**
  * `whatis` answers per host, promise-cached so a repeated question is free and two cards asking
  * at once share one probe. A settled `undefined` means "asked, no answer" — never re-probed for
@@ -74,6 +81,29 @@ export function forgetRemoteInventory(hostId: string) {
   follows.get(hostId)?.end();
   follows.delete(hostId);
   descriptions.delete(hostId);
+}
+
+/**
+ * Chunks in, whole lines out, with the operator's filter applied.
+ *
+ * A chunk boundary is not a line end, so the tail of one is carried into the next. Written once
+ * and used by both ways in, so a log read over a shell is split exactly as one read over SSH.
+ */
+function takerFor(
+  hostId: string,
+  filter: string | undefined,
+  send: (channel: string, ...args: unknown[]) => void,
+) {
+  let carry = "";
+  return (chunk: Buffer) => {
+    const text = carry + chunk.toString("utf8");
+    const lines = text.split("\n");
+    carry = lines.pop() ?? "";
+    const wanted = filter
+      ? lines.filter((line) => line.toLowerCase().includes(filter.toLowerCase()))
+      : lines;
+    if (wanted.length > 0) send("remote-inventory:log-lines", hostId, wanted);
+  };
 }
 
 function stopFollow(hostId: string) {
@@ -280,8 +310,6 @@ export function registerRemoteInventoryController(controllerDeps: InventoryContr
 
       stopFollow(hostId);
       const target = await deps.sshTarget(hostId);
-      const client = new Client();
-      follows.set(hostId, client);
 
       /*
        * The path is checked against the list this application offered.
@@ -302,6 +330,29 @@ export function registerRemoteInventoryController(controllerDeps: InventoryContr
         command = `tail -n 300 -F ${known.path}`;
       }
 
+      /*
+       * Reading lines as they arrive, whichever way in this server has.
+       *
+       * Over SSH that is a channel of its own. Over a shell handed back by a provider's tool it is
+       * a shell of its own — the same reason either way: a `-f` never ends, and sharing it with
+       * anything else would block whatever the other thing wanted to do.
+       */
+      const take = takerFor(hostId, filter, send);
+      if (target.shell) {
+        const child = spawnShell(target.shell);
+        follows.set(hostId, { end: () => killShell(child) });
+        child.stdout?.on("data", take);
+        child.stderr?.on("data", take);
+        child.on("close", () => {
+          send("remote-inventory:log-closed", hostId, undefined);
+          stopFollow(hostId);
+        });
+        child.stdin?.write(`${command}\n`);
+        return;
+      }
+
+      const client = new Client();
+      follows.set(hostId, client);
       await new Promise<void>((resolve, reject) => {
         client.on("ready", () => {
           client.exec(command, { pty: false }, (error, channel) => {
@@ -309,17 +360,6 @@ export function registerRemoteInventoryController(controllerDeps: InventoryContr
               reject(new Error(t("The log cannot be opened: {reason}", { reason: error.message })));
               return;
             }
-            let carry = "";
-            const take = (chunk: Buffer) => {
-              // Split on newlines and keep the partial tail: a chunk boundary is not a line end.
-              const text = carry + chunk.toString("utf8");
-              const lines = text.split("\n");
-              carry = lines.pop() ?? "";
-              const wanted = filter
-                ? lines.filter((line) => line.toLowerCase().includes(filter.toLowerCase()))
-                : lines;
-              if (wanted.length > 0) send("remote-inventory:log-lines", hostId, wanted);
-            };
             channel.on("data", take);
             channel.stderr?.on("data", take);
             channel.on("close", () => {

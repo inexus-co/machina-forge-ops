@@ -1227,6 +1227,30 @@ textarea:focus {
   box-shadow: 0 0 0 3px rgb(20 49 92 / 12%);
 }
 
+/*
+ * A field that cannot be typed into has to look like one.
+ *
+ * Blocks on these screens are always drawn and go grey when they do not apply, rather than
+ * appearing and vanishing and taking the layout with them — but until now only buttons carried
+ * that through, so a switched-off RDP block, and a sign-in nobody is being asked for, looked
+ * exactly like ones waiting to be filled in. Same colours as `button:disabled`, so off looks the
+ * same wherever it is.
+ */
+input:disabled,
+select:disabled,
+textarea:disabled {
+  border-color: #e0e8f2;
+  color: #a6b3c1;
+  background: #f4f7fb;
+  box-shadow: none;
+  cursor: default;
+}
+
+input:disabled::placeholder,
+textarea:disabled::placeholder {
+  color: #bcc7d4;
+}
+
 select {
   appearance: none;
   background-image:
@@ -6136,6 +6160,96 @@ body::-webkit-scrollbar {
   display: flex;
   gap: 6px;
   align-items: stretch;
+}
+
+/*
+ * The providers' own way in: the list of them, and their fields.
+ *
+ * The list is a fixed set of rows, and the fields are laid one set on top of another in a single
+ * cell — three for AWS, one for Cloudflare — so the tallest fixes the height once and choosing a
+ * provider moves nothing. The hidden ones are `visibility: hidden`, which also keeps them off the
+ * tab order: they are not fields anybody is being asked to fill in.
+ */
+.way-in {
+  display: grid;
+  gap: 12px;
+  max-width: 40em;
+}
+
+.way-in-choice {
+  display: grid;
+  gap: 4px;
+}
+
+/*
+ * A panel, because a fixed height has to be somebody's.
+ *
+ * The cell is as tall as the provider that asks for the most, so the ones that ask for less leave
+ * space under their fields. Unbounded that reads as a hole in the form; bounded it reads as the
+ * area those fields live in, which is what it is.
+ */
+.way-in-fields {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  padding: 12px;
+}
+
+.way-in-fields > .way-in-pane {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  grid-area: 1 / 1;
+  align-content: start;
+}
+
+/*
+ * The thing itself across the top, what qualifies it underneath.
+ *
+ * An instance ID is long and a region is short, and giving the short ones a line each made the
+ * tallest provider three rows deep — which every other provider then had to leave empty, because
+ * the cell is as tall as the tallest. Two columns puts every row of this table at two lines.
+ */
+.way-in-fields > .way-in-pane > label:first-child,
+.way-in-fields > .way-in-pane > .form-hint {
+  grid-column: 1 / -1;
+}
+
+.way-in-fields > .way-in-pane > label {
+  display: grid;
+  gap: 5px;
+}
+
+.way-in-fields > .way-in-pane[data-shown="false"] {
+  visibility: hidden;
+}
+
+.way-in .form-hint {
+  margin: 0;
+}
+
+/*
+ * The two of them in one cell, so the choice does not change the height.
+ *
+ * The key needs two rows and the password one. Rendered one at a time, pressing the choice took a
+ * row away and everything under it came up. Both are laid on top of each other instead: the taller
+ * fixes the height, and the hidden one is `visibility: hidden`, which also keeps it off the tab
+ * order — it is not a field anybody is being asked to fill in.
+ */
+.auth-fields {
+  display: grid;
+}
+
+.auth-fields > .auth-pane {
+  display: grid;
+  gap: 14px;
+  grid-area: 1 / 1;
+  align-content: start;
+}
+
+.auth-fields > .auth-pane[data-shown="false"] {
+  visibility: hidden;
 }
 
 .auth-choice button > small {

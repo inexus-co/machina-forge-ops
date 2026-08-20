@@ -251,6 +251,65 @@ export const JA: Messages = {
   "Jump server: {reason}": "踏み台：{reason}",
   "The jump server cannot reach {where}: {reason}": "踏み台から {where} へ繋げません：{reason}",
 
+  // wayIn.ts (the providers' table), tunnel.ts, and the host form's tabs
+  "Screen": "画面",
+  "SSH": "SSH",
+  "RDP and VNC": "RDP と VNC",
+  "The account, the key, tmux": "アカウント・鍵・tmux",
+  "When it cannot be reached directly": "直接つながらないとき",
+  "Go in through another server": "別のサーバーを通って入る",
+  "Straight to an address": "住所を書いて直接つなぐ",
+  "Machine name": "機械の名前",
+  "A command that ends in a shell": "シェルにたどり着くコマンド",
+  "It runs on this machine, as you. What comes back has to be a shell — the command is not given one, so a pipe or a semicolon here is a character, not a second command.":
+    "この機械で、あなたとして実行します。返ってくるものがシェルである必要があります。コマンドにシェルは与えないので、ここに書いたパイプやセミコロンは、ただの文字です。",
+  "A provider's command runs on this machine, as you, with the credentials you already use with them, and what comes back is a shell — so there is no account, no key and no host key here, and no files panel either. A jump server is not used as well.":
+    "事業者のコマンドは、この機械で、あなたとして、その事業者でいつも使っている資格情報のまま動きます。返ってくるのはシェルなので、アカウントも鍵もサーバーの鍵の確認もここにはありません。ファイルの画面も使えません。踏み台は、これと一緒には使いません。",
+  "Files are not available on a server reached by the provider's own command: that way in gives a shell, and file transfer needs SSH.":
+    "事業者のコマンドで入ったサーバーでは、ファイルの画面は使えません。返ってくるのはシェルで、ファイルの受け渡しには SSH が要ります。",
+  "{label} (only if needed)": "{label}（必要なときだけ）",
+  "Fill in {label} for the way in.": "入口の「{label}」を埋めてください。",
+  "This server's way in is not filled in.": "このサーバーの入口が埋まっていません。",
+  "{program} is not installed on this machine, or is not on the PATH.":
+    "{program} がこの機械に入っていないか、PATH にありません。",
+  "{program} said: {said}": "{program} からの返事：{said}",
+  "It ended without saying why.": "理由を言わずに終わりました。",
+  "The shell on the other end ended: {reason}": "向こう側のシェルが終わりました：{reason}",
+  "The way in could not be opened: {reason}": "入口を開けられませんでした：{reason}",
+  "The way in did not open in time: {reason}": "入口が時間内に開きませんでした：{reason}",
+  "Instance ID": "インスタンス ID",
+  "Region": "リージョン",
+  "Profile": "プロファイル",
+  "Instance name": "インスタンス名",
+  "Zone": "ゾーン",
+  "Project": "プロジェクト",
+  "Resource group": "リソースグループ",
+  "Something else": "そのほか",
+
+
+  // fileTransfer.ts (how a file gets across) and its tab
+  "File transfer": "ファイル転送",
+  "For the ones too big for the connection": "回線に載らない大きさのとき",
+  "Fill in {label} for file transfer.": "ファイル転送の「{label}」を埋めてください。",
+  "Straight down the connection": "そのまま回線で運ぶ",
+  "Over SSH that is SFTP. Over a shell handed back by a provider's command there is no SFTP, so the file travels as text down the same stream — which suits a configuration file and not a database dump.":
+    "SSH なら SFTP です。事業者のコマンドで返ってきたシェルには SFTP が無いので、同じ流れに文字として載せて運びます。設定ファイルには向きますが、データベースのダンプには向きません。",
+  "Where to leave it": "置き場所",
+  "Both machines need the AWS CLI and permission for that prefix — the server's from the role its instance already has, yours from the profile you already use.":
+    "両方の機械に AWS CLI と、その場所への権限が要ります。サーバー側はインスタンスにもともと付いているロールから、こちら側はいつも使っているプロファイルから。",
+  "Both machines need the Google Cloud CLI and permission for that prefix.":
+    "両方の機械に Google Cloud CLI と、その場所への権限が要ります。",
+  "Storage account": "ストレージアカウント",
+  "Both machines need the Azure CLI and permission on that container.":
+    "両方の機械に Azure CLI と、そのコンテナーへの権限が要ります。",
+  "Somewhere else": "そのほかの置き場所",
+  "The command that puts a file there": "そこへ置くコマンド",
+  "The command that gets it back": "そこから取るコマンド",
+  "Both run on whichever machine is sending or fetching, so both have to work on both. {f} is the file on that machine, {n} the name in the store.":
+    "送る側でも取る側でも同じ2つを使うので、両方の機械で動く必要があります。{f} はその機械でのファイル、{n} は置き場所での名前です。",
+  "Nothing of the store's is kept here — each machine uses the credentials it already has, and what is left in it is removed once the file is across. The seven steps of changing a file are the same either way: the real file is fetched, copied on both sides, and the difference goes on an approval card before anything is written.":
+    "置き場所の資格情報は、ここには持ちません。それぞれの機械が、もともと持っているもので入ります。運び終えたものは消します。ファイル変更の7段はどちらでも同じで、実物を取り、両側に控えを作り、差分を承認カードに出してから書き戻します。",
+
   // localeController.ts
   "That is not a language this can use.": "その言語は扱えません。",
 
@@ -744,7 +803,6 @@ export const JA: Messages = {
   "This one had already been decided.": "この操作は、すでに決まっていました。",
   "Command {n}, thinking…": "{n}件目のコマンド　考えています…",
   "Thinking…": "考えています…",
-  "Screen": "画面",
   "Show the commands it ran": "実行したコマンドを見る",
   "{title}'s screen": "{title}の画面",
   "Take {title}'s screen away": "{title}の画面を外す",

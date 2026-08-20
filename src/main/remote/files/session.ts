@@ -22,6 +22,18 @@ export class FileSession {
   private target?: SshTarget;
 
   private async connect(target: SshTarget): Promise<SFTPWrapper> {
+    /*
+     * There is no SFTP down a shell.
+     *
+     * SFTP is a subsystem of SSH, and a machine reached by asking its provider for a session has
+     * no SSH to ask. Said plainly here rather than left as a connection that fails with something
+     * about a handshake: the operator chose that way in, and this is what it costs.
+     */
+    if (target.shell) {
+      throw new Error(
+        t("Files are not available on a server reached by the provider's own command: that way in gives a shell, and file transfer needs SSH."),
+      );
+    }
     if (this.sftp && this.target && sameTarget(this.target, target)) return this.sftp;
     this.stop();
 

@@ -19,6 +19,26 @@ export type RemoteHostInput = {
    * key verification are the ones already there.
    */
   jumpHostId?: string;
+  /**
+   * How to reach a machine that has nothing open to the outside, when that is the case.
+   *
+   * `provider` is a row in `wayIn.ts` — AWS Systems Manager, Google Cloud IAP, Azure Bastion,
+   * Cloudflare Access, or a command written out — and `values` are the two or three things that row
+   * asks for. What travels is still ordinary SSH or RDP, so the account and the key are still the
+   * ones set out here; only the way the bytes get there changes.
+   *
+   * Exclusive with `jumpHostId`: two ways in are two things to debug when neither of them works.
+   */
+  wayIn?: { provider: string; values: Record<string, string> };
+  /**
+   * How a file is transferred between here and there, when the ordinary way is not enough.
+   *
+   * A row in `fileTransfer.ts`. Empty means straight down the connection — SFTP over SSH, and text
+   * down the stream over a shell — which is what a configuration file wants. A store named here is
+   * for the ones too big for that: both machines put a file in it and take it out again, with the
+   * credentials each already has.
+   */
+  fileTransfer?: { via: string; values: Record<string, string> };
   rdp?: {
     host: string;
     port: number;
@@ -144,6 +164,8 @@ export type RemoteHostState = {
   id: string;
   name: string;
   jumpHostId?: string;
+  wayIn?: { provider: string; values: Record<string, string> };
+  fileTransfer?: { via: string; values: Record<string, string> };
   rdp?: { host: string; port: number; username: string; hasPassword: boolean };
   vnc?: { host: string; port: number; username?: string; hasPassword: boolean; allowPlaintext?: boolean };
   ssh?: {
@@ -184,6 +206,8 @@ export type StoredRemoteHost = {
   id: string;
   name: string;
   jumpHostId?: string;
+  wayIn?: { provider: string; values: Record<string, string> };
+  fileTransfer?: { via: string; values: Record<string, string> };
   rdp?: { host: string; port: number; username: string };
   vnc?: { host: string; port: number; username?: string; allowPlaintext?: boolean };
   ssh?: {

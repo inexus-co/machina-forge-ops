@@ -1,6 +1,7 @@
 import { Client } from "ssh2";
 import { t } from "../../shared/i18n";
 import { type SshTarget, connectionOf, describe } from "./sshSession";
+import { ShellRunner } from "./shellHost";
 
 /**
  * Running one command on a server and reading what it said.
@@ -35,6 +36,13 @@ const READY_TIMEOUT_MS = 20_000;
 export class CommandRunner {
   private client?: Client;
   private target?: SshTarget;
+  /**
+   * The other kind of far end: a shell handed over by the provider's own tool.
+   *
+   * Held here for the same reason the SSH client is — one connection reused rather than one per
+   * command — and answering the same `run`, so nothing above this file knows which it got.
+   */
+  private shell?: ShellRunner;
 
   /** Connect, or say plainly why not. Called before the first command and after a drop. */
   private async connect(target: SshTarget): Promise<Client> {
@@ -61,6 +69,15 @@ export class CommandRunner {
     command: string,
     options: { timeoutMs?: number; sudoPassword?: string; maxOutputBytes?: number } = {},
   ): Promise<CommandResult> {
+    if (target.shell) {
+      if (!this.shell || !sameTarget(this.target ?? target, target) || !this.target) {
+        this.stop();
+        this.shell = new ShellRunner(target.shell);
+        this.target = target;
+      }
+      return await this.shell.run(command, options);
+    }
+
     const client = await this.connect(target);
     const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     /* Normally capped small so a runaway command cannot fill memory; `fetch_log` raises it on
@@ -137,6 +154,8 @@ export class CommandRunner {
   stop() {
     this.client?.end();
     this.client = undefined;
+    this.shell?.stop();
+    this.shell = undefined;
     this.target = undefined;
   }
 }

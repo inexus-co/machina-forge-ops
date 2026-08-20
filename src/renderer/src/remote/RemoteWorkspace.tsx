@@ -8,6 +8,7 @@ import type {
   RemoteScreenEvent,
 } from "../../../shared/remote";
 import { DEFAULT_RDP_PORT, DEFAULT_SSH_PORT } from "../../../shared/remote";
+import { identityFor } from "../../../shared/wayIn";
 import type { RemoteAgentRunState } from "../../../shared/remoteAgent";
 import { LOCAL_AGENT_HOST } from "../../../shared/remoteAgent";
 import type { Transfer } from "../../../shared/remoteFiles";
@@ -1084,7 +1085,7 @@ export function RemoteWorkspace() {
                   {host.ssh && (
                     <div className="remote-half terminal">
                       <div className="remote-half-bar">
-                        <span>{host.ssh.username}@{host.ssh.host}:{host.ssh.port}</span>
+                        <span>{addressOf(host)}</span>
                         <span className="remote-half-actions">
                           <button
                             className="quiet"
@@ -1759,11 +1760,23 @@ function sessionLabel(host: RemoteHostState) {
   return t("Not connected");
 }
 
+/**
+ * How to say where this server's shell is.
+ *
+ * An address where there is one. Where the machine is reached by asking its provider for a shell
+ * there is no address and no account of ours, and what identifies it is what was asked for — the
+ * instance id — which is what the operator recognises it by anyway.
+ */
+function addressOf(host: RemoteHostState) {
+  if (host.wayIn) return identityFor(host.wayIn);
+  return `${host.ssh?.username}@${host.ssh?.host}:${host.ssh?.port}`;
+}
+
 function describeEndpoints(host: RemoteHostState) {
   const parts = [];
   if (host.rdp) parts.push(`RDP ${host.rdp.host}:${host.rdp.port}`);
   if (host.vnc) parts.push(`VNC ${host.vnc.host}:${host.vnc.port}`);
-  if (host.ssh) parts.push(`SSH ${host.ssh.username}@${host.ssh.host}:${host.ssh.port}`);
+  if (host.ssh) parts.push(`SSH ${addressOf(host)}`);
   return parts.join("\n") || t("Nowhere to connect");
 }
 

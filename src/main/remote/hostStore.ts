@@ -20,6 +20,8 @@ const endpointSchema = z.object({
 });
 
 const sshEndpointSchema = endpointSchema.extend({
+  /* Empty where the machine is reached by a command: the instance id in `wayIn` names it. */
+  host: z.string().max(255),
   /* Older files predate the choice and were all passwords. */
   auth: z.enum(["password", "key"]).default("password"),
   keyPath: z.string().max(1024).optional(),
@@ -36,10 +38,30 @@ const vncEndpointSchema = z.object({
   allowPlaintext: z.boolean().optional(),
 });
 
+/**
+ * The way in, bounded rather than judged.
+ *
+ * Which provider it is and which fields it has is `shared/wayIn.ts`; an unknown row read back from
+ * an older or newer installation is simply a host with no way in, which is a host that says it
+ * cannot be reached rather than one that will not open.
+ */
+const wayInSchema = z.object({
+  provider: z.string().min(1).max(32),
+  values: z.record(z.string().max(64), z.string().max(2000)),
+});
+
+/** Where the big files go, when they do not fit down the connection. See `shared/fileTransfer.ts`. */
+const fileTransferSchema = z.object({
+  via: z.string().min(1).max(32),
+  values: z.record(z.string().max(64), z.string().max(2000)),
+});
+
 const storedHostSchema = z.object({
   id: z.string().min(1).max(64),
   name: z.string().min(1).max(120),
   jumpHostId: z.string().min(1).max(64).optional(),
+  wayIn: wayInSchema.optional(),
+  fileTransfer: fileTransferSchema.optional(),
   rdp: endpointSchema.optional(),
   vnc: vncEndpointSchema.optional(),
   ssh: sshEndpointSchema.optional(),

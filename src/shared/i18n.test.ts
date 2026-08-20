@@ -5,6 +5,8 @@ import { TIER1 } from "../main/remote/agent/catalog/tier1";
 import { PLUGINS } from "../main/remote/agent/plugins/catalog";
 import { INVENTORY_NOTES, LOG_SOURCE_LABELS } from "./remoteInventory";
 import { INSPECTION_NOTES } from "./remoteResources";
+import { WAY_IN_PROVIDERS } from "./wayIn";
+import { FILE_TRANSFER_WAYS } from "./fileTransfer";
 import {
   answerLanguageDirective,
   catalogText,
@@ -274,6 +276,64 @@ describe("sentences the main process hands over as data", () => {
     ...Object.values(INSPECTION_NOTES),
     ...Object.values(LOG_SOURCE_LABELS),
   ];
+
+  for (const target of LOCALES.filter((entry) => entry.id !== "en")) {
+    it(`${target.name} has a translation`, () => {
+      const missing = sentences.filter((line) => !translated(line, target.id));
+      expect(missing, `no ${target.name} for:\n${missing.join("\n")}`).toEqual([]);
+    });
+  }
+});
+
+/**
+ * The way-in table's own words.
+ *
+ * A provider is a row in `wayIn.ts` rather than a control on a screen, so nothing in the source
+ * says `t("Instance ID")` for the scanner above to find — the row is the only place that knows.
+ * Adding a provider without translating what it asks for fails here rather than on a Japanese
+ * screen. The providers' names are theirs and stay as they are; only what is ours is checked.
+ */
+describe("what the way-in table asks for", () => {
+  const sentences = WAY_IN_PROVIDERS.flatMap((provider) => [
+    ...(provider.ourWords ? [provider.name] : []),
+    ...provider.fields.map((field) => field.label),
+    ...(provider.note ? [provider.note] : []),
+  ]);
+
+  it("every provider was read", () => {
+    expect(WAY_IN_PROVIDERS.length).toBeGreaterThan(1);
+    expect(sentences.length).toBeGreaterThan(5);
+  });
+
+  for (const target of LOCALES.filter((entry) => entry.id !== "en")) {
+    it(`${target.name} has a translation`, () => {
+      const missing = sentences.filter((line) => !translated(line, target.id));
+      expect(missing, `no ${target.name} for:\n${missing.join("\n")}`).toEqual([]);
+    });
+  }
+});
+
+/**
+ * The same, for the table of how files are transferred.
+ *
+ * A way of transferring files is a row in `fileTransfer.ts`, so what it asks for is written there and
+ * nowhere else. The stores' own names stay as they are; only what is ours is checked.
+ */
+describe("what the file-transfer table asks for", () => {
+  const sentences = [
+    ...new Set(
+      FILE_TRANSFER_WAYS.flatMap((way) => [
+        ...(way.ourWords ? [way.name] : []),
+        ...way.fields.map((field) => field.label),
+        way.note,
+      ]),
+    ),
+  ];
+
+  it("every way was read", () => {
+    expect(FILE_TRANSFER_WAYS.length).toBeGreaterThan(1);
+    expect(sentences.length).toBeGreaterThan(5);
+  });
 
   for (const target of LOCALES.filter((entry) => entry.id !== "en")) {
     it(`${target.name} has a translation`, () => {

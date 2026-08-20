@@ -1,6 +1,7 @@
 import { Client, type ClientChannel } from "ssh2";
 import { t } from "../../../shared/i18n";
 import { createHash } from "node:crypto";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import type { Duplex } from "node:stream";
 
@@ -31,6 +32,14 @@ import type { Duplex } from "node:stream";
  */
 
 type Plan = {
+  /**
+   * When the far end is reached by asking its provider for a shell rather than by SSH.
+   *
+   * Everything else in this plan is then unused: there is no host key to check, no account of ours
+   * and no key file, because there is no SSH. The command is run here and its stdio is the
+   * terminal — see `main/remote/shellHost.ts`, which does the same thing inside the application.
+   */
+  shell?: { argv: string[]; env?: Record<string, string> };
   host: string;
   port: number;
   username: string;
@@ -49,6 +58,40 @@ type Plan = {
 };
 
 const say = (text: string) => process.stdout.write(`${text}\r\n`);
+
+/**
+ * The provider's own command, as the terminal.
+ *
+ * The same relaying as the SSH branch below, minus everything SSH: no handshake, no fingerprint,
+ * and no window size — the size travels in the SSH protocol, and this has none, so the far end
+ * keeps whatever it decided on when the session opened.
+ */
+function fromCommand(shell: { argv: string[]; env?: Record<string, string> }, serverTmux?: string) {
+  const [program, ...rest] = shell.argv;
+  say(`\u001b[2m${t("Connecting to {where}…", { where: program })}\u001b[0m`);
+  const child = spawn(program, rest, {
+    stdio: ["pipe", "pipe", "pipe"],
+    env: shell.env ? { ...process.env, ...shell.env } : process.env,
+  });
+  child.stdout?.on("data", (chunk: Buffer) => process.stdout.write(chunk));
+  child.stderr?.on("data", (chunk: Buffer) => process.stdout.write(chunk));
+  process.stdin.setRawMode?.(true);
+  process.stdin.on("data", (chunk: Buffer) => child.stdin?.write(chunk));
+  child.on("error", (cause: Error) => {
+    say(`\u001b[31m${cause.message}\u001b[0m`);
+    process.exit(1);
+  });
+  child.on("close", () => {
+    say(`\u001b[2m${t("— The connection has ended. You can close this window.")}\u001b[0m`);
+    process.exit(0);
+  });
+  if (serverTmux) {
+    child.stdin?.write(
+      `command -v tmux >/dev/null 2>&1 && exec tmux new-session -A -s ${serverTmux}` +
+        ` || echo ${JSON.stringify(t("tmux is not available; opening an ordinary shell."))}\n`,
+    );
+  }
+}
 
 function fingerprintOf(key: Buffer) {
   return `SHA256:${createHash("sha256").update(key).digest("base64").replace(/=+$/, "")}`;
@@ -90,6 +133,12 @@ function connection(plan: Plan, secret: string | undefined) {
 async function main() {
   const plan: Plan = JSON.parse(process.env.MACHINA_SSH ?? "{}");
   const secret = process.env.MACHINA_PASS;
+
+  if (plan.shell?.argv?.length) {
+    fromCommand(plan.shell, process.env.MACHINA_SERVER_TMUX);
+    return;
+  }
+
   if (!plan.host) {
     say(t("Nothing to connect to was handed over."));
     process.exit(2);

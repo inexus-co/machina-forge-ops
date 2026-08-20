@@ -66,6 +66,7 @@ import { registerRemoteHistoryController } from "./history/controller";
 import { registerRemoteRecordingController } from "./recording/controller";
 import { HistoryRecorder } from "./history/recorder";
 import { JumpConnection } from "./jump";
+import { identityFor, lineFor } from "../../shared/wayIn";
 import { TmuxSession, killSession, listSessions, tmuxVersion } from "./tmux/client";
 import { addressKey, readKnownHosts } from "./knownHosts";
 import { RdpSession } from "./rdpSession";
@@ -97,7 +98,17 @@ const endpointSchema = z.object({
   password: z.string().max(512),
 });
 
+/**
+ * The same, but the address may be missing.
+ *
+ * A machine reached by asking its provider for a shell has no address to write down — the
+ * instance id is what names it, and that lives in `wayIn`. Which of the two is required is decided
+ * below, where both are in view.
+ */
 const sshInputSchema = endpointSchema.extend({
+  host: z.string().max(255).refine((value) => !/[\s/\\?#@]/.test(value), {
+    message: t("A host name cannot contain URL punctuation."),
+  }),
   auth: z.enum(["password", "key"]),
   tmux: z.boolean().optional(),
   keepLocal: z.boolean().optional(),
@@ -121,13 +132,33 @@ const vncInputSchema = z.object({
   allowPlaintext: z.boolean().optional(),
 });
 
-const hostInputSchema = z.object({
-  name: z.string().max(120),
-  jumpHostId: z.string().min(1).max(64).optional(),
-  rdp: endpointSchema.optional(),
-  vnc: vncInputSchema.optional(),
-  ssh: sshInputSchema.optional(),
+/** How this one is reached, when it is not reached directly. Bounded, not judged — see `hostStore.ts`. */
+const wayInInputSchema = z.object({
+  provider: z.string().min(1).max(32),
+  values: z.record(z.string().max(64), z.string().max(2000)),
 });
+
+/** The same, crossing the bridge. Bounded, not judged — see `hostStore.ts`. */
+const fileTransferInputSchema = z.object({
+  via: z.string().min(1).max(32),
+  values: z.record(z.string().max(64), z.string().max(2000)),
+});
+
+const hostInputSchema = z
+  .object({
+    name: z.string().max(120),
+    jumpHostId: z.string().min(1).max(64).optional(),
+    wayIn: wayInInputSchema.optional(),
+    fileTransfer: fileTransferInputSchema.optional(),
+    rdp: endpointSchema.optional(),
+    vnc: vncInputSchema.optional(),
+    ssh: sshInputSchema.optional(),
+  })
+  /* One of the two has to say where the machine is: an address, or the way in that finds it. */
+  .refine((input) => !input.ssh || Boolean(input.ssh.host) || Boolean(input.wayIn), {
+    path: ["ssh", "host"],
+    message: t("Enter the SSH host."),
+  });
 
 const idSchema = z.string().min(1).max(64);
 const sessionIdSchema = z.string().min(1).max(64);
@@ -284,6 +315,8 @@ function stateOf(entry: Entry): RemoteHostState {
     id: stored.id,
     name: stored.name,
     jumpHostId: stored.jumpHostId,
+    wayIn: stored.wayIn,
+    fileTransfer: stored.fileTransfer,
     rdp: stored.rdp && { ...stored.rdp, hasPassword: entry.hasRdpPassword },
     vnc: stored.vnc && { ...stored.vnc, hasPassword: entry.hasVncPassword },
     ssh: stored.ssh && {
@@ -470,6 +503,22 @@ async function bridgePlanFor(id: string) {
   const ssh = entry.stored.ssh;
   if (!ssh) throw new Error(t("No SSH is set up for this server."));
 
+  /*
+   * Reached by the provider's own command: the plan is that command and nothing else.
+   *
+   * No fingerprint, because nothing here is verifying a host key — the provider's tool did that
+   * its own way before handing back a shell.
+   */
+  if (entry.stored.wayIn) {
+    const shell = lineFor(entry.stored.wayIn);
+    if (!shell) throw new Error(t("This server's way in is not filled in."));
+    return {
+      plan: { shell, host: ssh.host, port: ssh.port, username: ssh.username, auth: ssh.auth, fingerprint: "" },
+      secret: undefined,
+      jumpSecret: undefined,
+    };
+  }
+
   const known = await readKnownHosts(root);
   const fingerprint = known[addressKey("ssh", ssh.host, ssh.port)]?.fingerprint;
   if (!fingerprint) throw new Error(t("Check this server's key first."));
@@ -526,6 +575,8 @@ async function ensureHostKnown(id: string) {
   const entry = require(id);
   const ssh = entry.stored.ssh;
   if (!ssh) throw new Error(t("No SSH is set up for this server."));
+  /* No SSH, no host key: the provider's own tool decided who this machine is. */
+  if (entry.stored.wayIn) return;
   const known = await readKnownHosts(root);
   if (known[addressKey("ssh", ssh.host, ssh.port)]) return;
   const runner = new CommandRunner();
@@ -541,6 +592,26 @@ export async function sshTargetFor(id: string, asBastion = false): Promise<SshTa
   const ssh = entry.stored.ssh;
   if (!ssh) throw new Error(t("No SSH is set up for this server."));
 
+  /*
+   * Reached by asking its provider for a shell, when that is how it is reached.
+   *
+   * Nothing else on this target applies then: there is no port, no account of ours, no key, and no
+   * host key to remember, because there is no SSH. Everything that connects takes the command from
+   * here and runs one of its own — the terminal, the agent, the status reading — the same way each
+   * used to open a connection of its own.
+   */
+  if (!asBastion && entry.stored.wayIn) {
+    const shell = lineFor(entry.stored.wayIn);
+    if (!shell) throw new Error(t("This server's way in is not filled in."));
+    /*
+     * Named by what was asked for, because two of these must never look like one machine.
+     *
+     * Whatever holds a connection open keeps it against this name — and with no address to use,
+     * two instances would otherwise both be "" and share a shell.
+     */
+    return { host: identityFor(entry.stored.wayIn), port: ssh.port, username: ssh.username, shell };
+  }
+
   const verifyHostKey = sshVerifier(ssh.host, ssh.port);
   /*
    * One hop.
@@ -549,6 +620,13 @@ export async function sshTargetFor(id: string, asBastion = false): Promise<SshTa
    * Asked for as a bastion, a host is reached directly — which is what a bastion is.
    */
   const jump = asBastion ? undefined : jumpFor(entry);
+  /*
+   * Whichever way in this host has, the stream is what changes and nothing else.
+   *
+   * `host`, `port` and `verifyHostKey` stay the machine's own: they are how this application
+   * remembers whose key it saw. Keyed on a loopback port instead, every session would look like a
+   * server it had never met, and the operator would answer for a fingerprint every time.
+   */
   const sock = jump ? await jump.channel(ssh.host, ssh.port) : undefined;
 
   if (ssh.auth === "key") {
@@ -716,7 +794,11 @@ export async function registerRemoteController(
       {
         id,
         name: named,
-        jumpHostId: input.jumpHostId,
+        /* One way in. Both set would be two things to debug when neither works, so the bastion
+           gives way to the command — the one that reaches machines nothing else can reach. */
+        jumpHostId: input.wayIn ? undefined : input.jumpHostId,
+        wayIn: input.wayIn,
+        fileTransfer: input.fileTransfer,
         rdp: input.rdp && { host: input.rdp.host, port: input.rdp.port, username: input.rdp.username },
         vnc: input.vnc && storedVnc(input.vnc),
         ssh: input.ssh && storedSsh(input.ssh),
@@ -750,7 +832,9 @@ export async function registerRemoteController(
     entry.stored = {
       ...entry.stored,
       name: input.name.trim() || input.rdp?.host || input.vnc?.host || input.ssh?.host || entry.stored.name,
-      jumpHostId: input.jumpHostId,
+      jumpHostId: input.wayIn ? undefined : input.jumpHostId,
+      wayIn: input.wayIn,
+      fileTransfer: input.fileTransfer,
       rdp: input.rdp && { host: input.rdp.host, port: input.rdp.port, username: input.rdp.username },
       vnc: input.vnc && storedVnc(input.vnc),
       ssh: input.ssh && storedSsh(input.ssh),
@@ -1012,6 +1096,8 @@ export async function registerRemoteController(
          * which is why both are passed.
          */
         const jump = jumpFor(entry);
+
+        /* The helper is its own process, so the screen needs a port here whichever way it goes. */
         const forwarded = jump
           ? await jump.listen(entry.stored.rdp.host, entry.stored.rdp.port)
           : undefined;
@@ -1137,6 +1223,7 @@ export async function registerRemoteController(
     entry.detail = undefined;
     try {
       const jump = jumpFor(entry);
+
       const forwarded = jump
         ? await jump.listen(entry.stored.vnc.host, entry.stored.vnc.port)
         : undefined;
