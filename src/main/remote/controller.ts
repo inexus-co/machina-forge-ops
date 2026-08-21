@@ -829,6 +829,7 @@ export async function registerRemoteController(
   ipcMain.handle("remote:update", async (_event, rawId: unknown, rawInput: unknown) => {
     const entry = require(rawId as string);
     const input: RemoteHostInput = hostInputSchema.parse(rawInput);
+    const wasJumpedThrough = entry.stored.jumpHostId;
     entry.stored = {
       ...entry.stored,
       name: input.name.trim() || input.rdp?.host || input.vnc?.host || input.ssh?.host || entry.stored.name,
@@ -848,6 +849,28 @@ export async function registerRemoteController(
      */
     if (!input.rdp) entry.rdp.stop();
     if (!input.vnc) entry.vnc.stop();
+
+    /*
+     * What went wrong belonged to the settings that have just been replaced.
+     *
+     * Left where it was, the operator fixes the password, presses save, and reads the same red
+     * line about the password — so the fix looks like it did nothing, and the next thing they
+     * change is something that was never wrong. The reading is only true until the settings it
+     * describes are gone.
+     */
+    entry.detail = undefined;
+
+    /*
+     * A route that changed is a connection that has to be made again.
+     *
+     * The bastion is held on the entry and shared by everything using this host, and it was opened
+     * against the old one. Only when it actually changed: dropping it otherwise would cut a
+     * terminal somebody is typing into, for an edit that had nothing to do with the route.
+     */
+    if (entry.stored.jumpHostId !== wasJumpedThrough) {
+      entry.jump?.stop();
+      entry.jump = undefined;
+    }
     if (input.rdp?.password) {
       await writeSecret(root, cipher!, secretKey(entry.stored.id, "rdp"), input.rdp.password);
       entry.hasRdpPassword = true;

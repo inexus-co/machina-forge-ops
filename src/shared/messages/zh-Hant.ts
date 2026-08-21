@@ -282,6 +282,7 @@ export const ZH_HANT: Messages = {
 
 
   // fileTransfer.ts (how a file gets across) and its tab
+  "Saved.": "已儲存。",
   "File transfer": "檔案傳輸",
   "For the ones too big for the connection": "線路載不下的時候",
   "Fill in {label} for file transfer.": "請填寫檔案傳輸的「{label}」。",

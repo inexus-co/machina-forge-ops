@@ -288,6 +288,7 @@ export const JA: Messages = {
 
 
   // fileTransfer.ts (how a file gets across) and its tab
+  "Saved.": "保存しました。",
   "File transfer": "ファイル転送",
   "For the ones too big for the connection": "回線に載らない大きさのとき",
   "Fill in {label} for file transfer.": "ファイル転送の「{label}」を埋めてください。",

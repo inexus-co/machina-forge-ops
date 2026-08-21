@@ -160,8 +160,20 @@ export class CommandRunner {
   }
 }
 
+/**
+ * Whether a held connection is still the one being asked for.
+ *
+ * The address and the account, and — where the far end is reached by running a command — the
+ * command itself. Without that last part, editing the region or the profile of a provider's way in
+ * leaves the connection opened with the old ones, and the operator's correction does nothing.
+ */
 function sameTarget(a: SshTarget, b: SshTarget) {
-  return a.host === b.host && a.port === b.port && a.username === b.username;
+  return (
+    a.host === b.host &&
+    a.port === b.port &&
+    a.username === b.username &&
+    JSON.stringify(a.shell ?? null) === JSON.stringify(b.shell ?? null)
+  );
 }
 
 /**

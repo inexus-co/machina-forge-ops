@@ -1394,17 +1394,29 @@ export function RemoteWorkspace() {
                     setEditing(undefined);
                   })
                 }
-                onSave={(input) =>
-                  void act(async () => {
+                /*
+                 * Saved, and still open.
+                 *
+                 * Closing on the press was the wrong end of the job: what the operator wants to
+                 * know next is whether the server answers, and they were sent back to a list to
+                 * find out. Adding is the one thing that has to change something here — the
+                 * dialog stops being "new" and becomes that server, or a second press would add
+                 * a second copy.
+                 */
+                onSave={async (input) => {
+                  let landed = false;
+                  await act(async () => {
                     if (editing === "new") {
                       const created = await window.machina.remote.create(input);
                       setSelectedId(created.id);
+                      setEditing(created.id);
                     } else {
                       await window.machina.remote.update(editing, input);
                     }
-                    setEditing(undefined);
-                  })
-                }
+                    landed = true;
+                  });
+                  return landed;
+                }}
               />
                 </div>
               </div>

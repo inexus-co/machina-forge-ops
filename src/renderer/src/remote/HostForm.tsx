@@ -113,12 +113,21 @@ export function HostForm({
   /** The other registered servers, one of which may be this one's way in. */
   hosts: RemoteHostState[];
   busy: boolean;
-  onSave: (input: RemoteHostInput) => void;
+  /** Whether it landed. False keeps the dialog as it is, with the reason already on screen. */
+  onSave: (input: RemoteHostInput) => Promise<boolean>;
   onRemove: (id: string) => void;
   onCancel: () => void;
 }) {
   const t = useT();
   const [draft, setDraft] = useState<Draft>(() => draftOf(host));
+  /**
+   * What was last written down, to compare the draft against.
+   *
+   * Not the `host` prop: after saving, the store trims and fills in, and comparing against that
+   * would leave the button alive over differences nobody typed. This is what the form itself last
+   * sent, which is what "unchanged" means to whoever is looking at it.
+   */
+  const [saved, setSaved] = useState<Draft>(() => draftOf(host));
   /**
    * Which part of this server's settings is on screen.
    *
@@ -144,10 +153,19 @@ export function HostForm({
 
   useEffect(() => {
     setDraft(draftOf(host));
+    setSaved(draftOf(host));
     setTouchedRdp(false);
     setTouchedVnc(false);
     setTouchedSsh(false);
   }, [host?.id]);
+
+  /**
+   * Whether there is anything to save.
+   *
+   * Compared as text, because every field in a draft is a string, a number or a boolean, and two
+   * of them built the same way put their keys in the same order.
+   */
+  const changed = JSON.stringify(draft) !== JSON.stringify(saved);
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
@@ -161,6 +179,8 @@ export function HostForm({
    */
   /* Shown as a toast, not as a line that appears between the fields and moves them. */
   const [problem, setProblem] = useState<string>();
+  /** The same, for the one thing that goes right. */
+  const [done, setDone] = useState<string>();
 
   const missing = () => {
     if (!draft.useRdp && !draft.useVnc && !draft.useSsh)
@@ -825,6 +845,7 @@ export function HostForm({
       </section>
 
       {problem && <Toast message={problem} onDismiss={() => setProblem(undefined)} />}
+      {done && <Toast kind="good" message={done} onDismiss={() => setDone(undefined)} />}
 
       {/* Outside the fields, at the foot of the dialog: the connection tab has eight of them and
           the jump tab has one,
@@ -847,8 +868,15 @@ export function HostForm({
           <button className="secondary" disabled={busy} type="button" onClick={onCancel}>
             {t("Cancel")}
           </button>
+          {/*
+            Dead while there is nothing to save.
+
+            Not the same as the old "dead until the form is complete", which read as a broken
+            application in front of a form that looked filled in. Nothing typed is not an
+            incomplete answer — it is no answer, and there is nothing for the press to do.
+          */}
           <button
-            disabled={busy}
+            disabled={busy || !changed}
             type="button"
             onClick={() => {
               const reason = missing();
@@ -861,7 +889,7 @@ export function HostForm({
                       values: draft.wayInValues[draft.wayInProvider] ?? {},
                     }
                   : undefined;
-              onSave({
+              const input = {
                 name: draft.name,
                 /* One way in: the provider's own reaches machines a jump server cannot, so it
                    wins, and only what was chosen is saved at all. */
@@ -910,6 +938,20 @@ export function HostForm({
                       passphrase: wayIn ? undefined : draft.sshPassphrase || undefined,
                     }
                   : undefined,
+              };
+              /*
+               * The dialog stays where it is.
+               *
+               * It used to vanish on the press, which took the operator back to a list and left
+               * them to work out whether anything had happened — and when the connection then
+               * failed, they had to find their way back in to change the one thing again. Saving
+               * is not leaving: what was saved is said, the button goes quiet because there is
+               * nothing left to save, and the way out is the way it always was.
+               */
+              void onSave(input).then((landed) => {
+                if (!landed) return;
+                setSaved(draft);
+                setDone(t("Saved."));
               });
             }}
           >

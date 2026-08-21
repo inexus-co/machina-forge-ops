@@ -10,9 +10,12 @@ import { useT } from "../i18n";
  * One shape, one place, and the page underneath does not move.
  */
 export function Toast({
+  kind = "bad",
   message,
   onDismiss,
 }: {
+  /** Whether this is something that went wrong, or something that went right. */
+  kind?: "bad" | "good";
   message: string;
   onDismiss: () => void;
 }) {
@@ -24,7 +27,7 @@ export function Toast({
   }, [message, onDismiss]);
 
   return (
-    <div className="toast" role="alert">
+    <div className={kind === "good" ? "toast good" : "toast"} role="alert">
       <span>{message}</span>
       <button aria-label={t("Close")} className="quiet" type="button" onClick={onDismiss}>
         ✕
